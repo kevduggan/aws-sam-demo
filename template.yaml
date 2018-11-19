@@ -1,0 +1,87 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+    chocolate-lotto
+
+Globals:
+    Function:
+        Timeout: 20
+
+Resources:
+
+    GetWinnerFunction:
+        Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+        Properties:
+            CodeUri: target/Lotto-1.0.jar
+            Handler: com.poppulo.chocolate.GetWinnerHandler::handleRequest
+            Runtime: java8
+            MemorySize: 256
+            Policies:
+              - Version: '2012-10-17'
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - xray:PutTelemetryRecords
+                      - xray:PutTraceSegments
+                    Resource: '*'
+                  - Effect: Allow
+                    Action:
+                      - dynamodb:Query
+                    Resource:
+                      - !GetAtt LottoTable.Arn
+            Events:
+                GetWinner:
+                    Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+                    Properties:
+                        Path: /lotto
+                        Method: get
+
+    GetTicketFunction:
+        Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+        Properties:
+            CodeUri: target/Lotto-1.0.jar
+            Handler: com.poppulo.chocolate.GetTicketHandler::handleRequest
+            Runtime: java8
+            MemorySize: 256
+            Policies:
+              - Version: '2012-10-17'
+                Statement:
+                  - Effect: Allow
+                    Action:
+                      - xray:PutTelemetryRecords
+                      - xray:PutTraceSegments
+                    Resource: '*'
+                  - Effect: Allow
+                    Action:
+                      - dynamodb:PutItem
+                    Resource:
+                      - !GetAtt LottoTable.Arn
+            Events:
+                GetWinner:
+                    Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+                    Properties:
+                        Path: /lotto/ticket
+                        Method: get
+
+    LottoTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "game"
+            AttributeType: "S"
+          -
+           AttributeName: "ticketValue"
+           AttributeType: "N"
+        KeySchema:
+          -
+            AttributeName: "game"
+            KeyType: "HASH"
+          -
+            AttributeName: "ticketValue"
+            KeyType: "RANGE"
+        ProvisionedThroughput:
+          ReadCapacityUnits: "1"
+          WriteCapacityUnits: "1"
+        TableName: "lotto"
+
